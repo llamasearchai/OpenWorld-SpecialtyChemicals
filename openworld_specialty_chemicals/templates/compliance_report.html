@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Compliance Report - {{ site_name }}</title>
+    <style>
+        body { 
+            font-family: 'Arial', 'Helvetica', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+        .header h1 { 
+            color: #2c3e50; 
+            margin: 0; 
+            font-size: 2.2em;
+        }
+        .meta { 
+            color: #7f8c8d; 
+            font-size: 0.95em; 
+            margin-top: 10px;
+        }
+        .status { 
+            text-align: center; 
+            margin: 30px 0; 
+            padding: 20px;
+            border-radius: 6px;
+        }
+        .status.compliant { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .status.non-compliant { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
+        }
+        .status h2 { 
+            margin: 0; 
+            font-size: 1.8em;
+        }
+        .alerts-section h3 { 
+            color: #2c3e50; 
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px;
+            background: white;
+        }
+        th { 
+            background-color: #34495e; 
+            color: white; 
+            padding: 12px; 
+            text-align: left;
+            font-weight: 600;
+        }
+        td { 
+            padding: 12px; 
+            border-bottom: 1px solid #ecf0f1;
+        }
+        tr:nth-child(even) { 
+            background-color: #f8f9fa;
+        }
+        tr:hover { 
+            background-color: #e8f4fd;
+        }
+        .level-critical { 
+            background-color: #dc3545 !important; 
+            color: white; 
+            font-weight: bold;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .level-warning { 
+            background-color: #ffc107 !important; 
+            color: #212529; 
+            font-weight: bold;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .level-watch { 
+            background-color: #17a2b8 !important; 
+            color: white; 
+            font-weight: bold;
+            text-align: center;
+            border-radius: 4px;
+        }
+        .level-info { 
+            background-color: #6c757d !important; 
+            color: white; 
+            text-align: center;
+            border-radius: 4px;
+        }
+        .no-alerts { 
+            text-align: center; 
+            color: #6c757d; 
+            font-style: italic; 
+            padding: 40px;
+        }
+        .footer { 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            border-top: 1px solid #e0e0e0; 
+            text-align: center; 
+            color: #7f8c8d; 
+            font-size: 0.9em;
+        }
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 20px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            flex: 1;
+            border-left: 4px solid #007bff;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Environmental Compliance Report</h1>
+            <div class="meta">
+                <strong>Site:</strong> {{ site_name }}<br>
+                <strong>Generated:</strong> {{ timestamp }}<br>
+                <strong>Report Period:</strong> {{ report_period | default('Current') }}
+            </div>
+        </div>
+
+        <div class="status {% if alerts %}non-compliant{% else %}compliant{% endif %}">
+            <h2>
+                {% if alerts %}
+                    [WARNING] NON-COMPLIANT
+                {% else %}
+                    [SUCCESS] COMPLIANT
+                {% endif %}
+            </h2>
+            <p>
+                {% if alerts %}
+                    {{ alerts|length }} compliance issue(s) detected and require immediate attention
+                {% else %}
+                    All monitored parameters are within acceptable limits
+                {% endif %}
+            </p>
+        </div>
+
+        {% if alerts %}
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|length }}</div>
+                <div class="stat-label">Total Alerts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('level', 'equalto', 'critical')|list|length }}</div>
+                <div class="stat-label">Critical</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('level', 'equalto', 'warning')|list|length }}</div>
+                <div class="stat-label">Warning</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ alerts|selectattr('level', 'equalto', 'watch')|list|length }}</div>
+                <div class="stat-label">Watch</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="alerts-section">
+            <h3>Compliance Details</h3>
+            {% if alerts %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Species</th>
+                        <th>Alert Type</th>
+                        <th>Severity</th>
+                        <th>Measured (mg/L)</th>
+                        <th>Limit (mg/L)</th>
+                        <th>Recommended Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr>
+                        <td>{{ alert.time | default('N/A') }}</td>
+                        <td><strong>{{ alert.species }}</strong></td>
+                        <td>{{ alert.type | default('exceedance') | title }}</td>
+                        <td>
+                            <span class="level-{{ alert.level }}">
+                                {{ alert.level | upper }}
+                            </span>
+                        </td>
+                        <td>{{ "%.3f"|format(alert.value) }}</td>
+                        <td>{{ "%.3f"|format(alert.limit) }}</td>
+                        <td>{{ alert.action | default('Review treatment process') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-alerts">
+                <p>[NOALERTS] No compliance issues detected during this monitoring period.</p>
+                <p>All monitored chemical species are within regulatory limits.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <p>This report was automatically generated by OpenWorld Specialty Chemicals monitoring system.</p>
+            <p>For questions or concerns, please contact your environmental compliance team.</p>
+        </div>
+    </div>
+</body>
+</html>

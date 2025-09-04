@@ -1,0 +1,13 @@
+[build.targets.sdist]
+include = ["openworld_specialty_chemicals", "README.md", "LICENSE"]
+
+[envs.default]
+dependencies = ["pytest", "ruff"]
+
+[envs.test]
+dependencies = ["pytest", "pytest-cov"]
+
+[envs.lint]
+dependencies = ["ruff"]
+
+

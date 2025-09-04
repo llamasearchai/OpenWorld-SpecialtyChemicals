@@ -1,0 +1,8 @@
+html, body { height: 100%; margin: 0; padding: 0; }
+#app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+#header { padding: 0.5rem 1rem; background: #f3f4f6; }
+#content { display: grid; grid-template-columns: 1fr; padding: 1rem; }
+#stream { background: #fafafa; padding: 1rem; border: 1px solid #e5e7eb; }
+pre { height: 70vh; overflow: auto; background: #111; color: #0f0; padding: 1rem; }
+
+

@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Compliance Certificate - {{ site }}</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, sans-serif; margin: 2rem; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+      .status { font-weight: 600; }
+      .small { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Compliance Certificate</h1>
+    <p><strong>Site:</strong> {{ site }}</p>
+    <p class="small"><strong>Generated:</strong> {{ ts }}</p>
+    <p class="status"><strong>Status:</strong> {{ status }}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>time</th>
+          <th>species</th>
+          <th>value</th>
+          <th>limit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alerts %}
+        <tr>
+          <td>{{ a.time }}</td>
+          <td>{{ a.species }}</td>
+          <td>{{ a.value }}</td>
+          <td>{{ a.limit }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </body>
+</html>
+
+
