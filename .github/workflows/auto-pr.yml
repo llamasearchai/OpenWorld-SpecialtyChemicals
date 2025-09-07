@@ -1,0 +1,26 @@
+name: Auto PR for feature branches
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: ${{ github.ref_name }}
+          destination_branch: main
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_title: "chore: merge ${${{ github.ref_name }}} into main"
+          pr_body: |
+            Automated PR to merge feature branch `${{ github.ref_name }}` into `main`.
+
+            Includes production hardening, CI, Helm chart, docs, and release automation.
