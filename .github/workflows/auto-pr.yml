@@ -19,7 +19,7 @@ jobs:
           source_branch: ${{ github.ref_name }}
           destination_branch: main
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          pr_title: "chore: merge ${${{ github.ref_name }}} into main"
+          pr_title: "chore: merge ${{ github.ref_name }} into main"
           pr_body: |
             Automated PR to merge feature branch `${{ github.ref_name }}` into `main`.
 
