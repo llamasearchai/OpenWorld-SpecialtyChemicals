@@ -220,11 +220,11 @@ def main():
                 print(f"  [SUCCESS] {file_path}")
 
         print("\nDemo Summary:")
-        print("  • Processed chemistry data for SO4 species")
-        print("  • Detected permit violations with rolling averages")
-        print("  • Generated professional compliance certificate")
-        print("  • Provided AI-powered remediation recommendations")
-        print("  • Simulated real-time effluent streaming")
+        print("  - Processed chemistry data for SO4 species")
+        print("  - Detected permit violations with rolling averages")
+        print("  - Generated professional compliance certificate")
+        print("  - Provided AI-powered remediation recommendations")
+        print("  - Simulated real-time effluent streaming")
 
         print("\n[FINAL] OpenWorld Specialty Chemicals CLI is fully functional!")
         print("[READY] System is production-ready with no emojis, stubs, or placeholders!")

@@ -10,7 +10,13 @@ from rich.panel import Panel
 from dotenv import load_dotenv
 import pandas as pd
 
-from .logging import get_logger
+from .logging import get_logger, set_correlation_id, setup_development_logging, setup_production_logging
+from .errors import (
+    map_exception,
+    NotFoundError,
+    ValidationError,
+    UsageError,
+)
 from .config import settings
 from .provenance import ProvenanceStore
 from .lineage import LineageStore
@@ -27,15 +33,23 @@ console = Console()
 app = typer.Typer(add_completion=False, help="OpenWorld Specialty Chemicals CLI - Environmental compliance monitoring and reporting")
 log = get_logger("openworld-chem")
 
+def _log_event(event: str, **fields) -> None:
+    try:
+        log.info(event, extra={"event": event, "fields": fields})
+    except Exception:
+        pass
+DRY_RUN = False
+QUIET = False
+
 def _validate_file_exists(file_path: str, file_type: str = "file") -> Path:
     """Validate that a file exists and is readable."""
     path = Path(file_path)
     if not path.exists():
         console.print(f"[red][ERROR] {file_type.title()} not found: {file_path}[/red]")
-        raise typer.Exit(2)
+        raise NotFoundError(f"{file_type} not found: {file_path}")
     if not path.is_file():
         console.print(f"[red][ERROR] Path is not a file: {file_path}[/red]")
-        raise typer.Exit(2)
+        raise ValidationError(f"Path is not a file: {file_path}")
     return path
 
 def _validate_csv_format(df: pd.DataFrame, required_columns: list[str], file_path: str) -> None:
@@ -44,32 +58,53 @@ def _validate_csv_format(df: pd.DataFrame, required_columns: list[str], file_pat
     if missing:
         console.print(f"[red][ERROR] CSV file {file_path} is missing required columns: {', '.join(sorted(missing))}[/red]")
         console.print(f"[yellow]Available columns: {', '.join(df.columns)}[/yellow]")
-        raise typer.Exit(2)
+        raise ValidationError(f"CSV missing columns: {', '.join(sorted(missing))}")
 
 def _handle_error(operation: str, error: Exception) -> None:
     """Standardized error handling."""
-    console.print(f"[red][ERROR] Error during {operation}: {str(error)}[/red]")
-    log.error(f"Operation '{operation}' failed: {error}", exc_info=True)
-            raise typer.Exit(1)
+    info = map_exception(error)
+    console.print(f"[red][ERROR] Error during {operation}: {info.message}[/red]")
+    log.error(f"Operation '{operation}' failed: {info.message}", exc_info=True)
+    raise typer.Exit(int(info.code))
 
 @app.callback()
 def main(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress non-error console output"),
+    log_format: str = typer.Option("text", "--log-format", help="Log format: text or json", metavar="{text|json}"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Do not modify files or make network calls; print planned actions"),
     config_file: Optional[str] = typer.Option(None, "--config", help="Path to configuration file")
 ) -> None:
     """OpenWorld Specialty Chemicals CLI - Environmental compliance monitoring and reporting."""
     load_dotenv()
-    
-    if verbose:
+    global DRY_RUN, QUIET
+    DRY_RUN = dry_run
+    QUIET = quiet
+
+    # Configure logging with correlation id and format
+    from uuid import uuid4
+    corr_id = uuid4().hex[:8]
+    set_correlation_id(corr_id)
+    json_fmt = (log_format.lower() == "json")
+    # Expose chosen format to child processes/uvicorn
+    os.environ["LOG_FORMAT"] = "json" if json_fmt else "text"
+    if verbose and not quiet:
+        setup_development_logging(json_format=json_fmt)
         log.setLevel("DEBUG")
-        console.print("[blue][CONFIG] Verbose logging enabled[/blue]")
+        console.print(f"[blue][CONFIG] Verbose logging enabled | corr_id={corr_id} | format={log_format}[/blue]")
+    else:
+        setup_production_logging(json_format=json_fmt)
+        if quiet:
+            log.setLevel("ERROR")
+        console.print(f"[blue][CONFIG] corr_id={corr_id} | format={log_format} | quiet={quiet} | dry_run={dry_run}[/blue]")
     
     if config_file:
         config_path = Path(config_file)
         if not config_path.exists():
             console.print(f"[red][ERROR] Configuration file not found: {config_file}[/red]")
-            raise typer.Exit(2)
-        console.print(f"[blue][CONFIG] Using configuration: {config_file}[/blue]")
+            raise NotFoundError(f"Configuration file not found: {config_file}")
+        if not QUIET:
+            console.print(f"[blue][CONFIG] Using configuration: {config_file}[/blue]")
 
 @app.command(name="process-chemistry")
 def process_chemistry(
@@ -86,14 +121,16 @@ def process_chemistry(
     try:
         # Validate input file
         input_path = _validate_file_exists(input, "CSV input file")
+        _log_event("chemistry_process_start", species=species, input=str(input_path), out=out)
         
-        console.print(f"[blue][CHEMISTRY] Processing chemistry data for species: {species}[/blue]")
+        if not QUIET:
+            console.print(f"[blue][CHEMISTRY] Processing chemistry data for species: {species}[/blue]")
         
         # Load and validate CSV
         df = pd.read_csv(input_path)
         if df.empty:
             console.print("[red][ERROR] Error: Input CSV file is empty[/red]")
-            raise typer.Exit(2)
+            raise ValidationError("Input CSV file is empty")
             
         # Auto-detect format and convert if needed
         species_col = f"{species}_mgL"
@@ -101,7 +138,7 @@ def process_chemistry(
             # Wide format - convert to tidy
             if len(df.columns) < 2:
                 console.print("[red][ERROR] Error: Wide format CSV must have at least time and concentration columns[/red]")
-                raise typer.Exit(2)
+                raise ValidationError("Wide format CSV requires time and concentration columns")
                 
             time_col = df.columns[0]  # Assume first column is time
             tidy = pd.DataFrame({
@@ -109,47 +146,57 @@ def process_chemistry(
                 "species": [species] * len(df),
                 "concentration": df[species_col].to_numpy(),
             })
-            console.print(f"[yellow][CONVERT] Converted wide format to tidy (time column: {time_col})[/yellow]")
+            if not QUIET:
+                console.print(f"[yellow][CONVERT] Converted wide format to tidy (time column: {time_col})[/yellow]")
         else:
             # Assume tidy format
             _validate_csv_format(df, ["time", "species", "concentration"], input)
             tidy = df
             
         # Fit parameters
-        console.print("[blue][PROCESS] Fitting sorption/decay parameters...[/blue]")
+        if not QUIET:
+            console.print("[blue][PROCESS] Fitting sorption/decay parameters...[/blue]")
         res = fit_parameters(tidy, species)
         payload = res.to_dict()
+        _log_event("chemistry_fit_completed", species=species, k=payload.get("k"), Kd=payload.get("Kd"))
         
         # Ensure output directory and write results
-        ensure_dir(os.path.dirname(out))
-        with open(out, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        if DRY_RUN:
+            if not QUIET:
+                console.print(f"[yellow][DRY-RUN] Would write calibration to: {out}[/yellow]")
+        else:
+            ensure_dir(os.path.dirname(out))
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+        _log_event("chemistry_process_end", out=out, dry_run=DRY_RUN)
             
         # Display results
-        console.print(Panel.fit(
+        if not QUIET:
+            console.print(Panel.fit(
             f"[green][SUCCESS] Chemistry processing completed successfully![/green]\n\n"
             f"Species: [bold]{species}[/bold]\n"
             f"Sorption rate (k): [bold]{payload['k']:.6f}[/bold]\n"  
             f"Distribution coeff (Kd): [bold]{payload['Kd']:.6f}[/bold]\n"
             f"Output: [bold]{out}[/bold]",
             title="[DATA] Chemistry Results"
-        ))
+            ))
         
         # Log provenance
-        ProvenanceStore(settings.provenance_ledger).log(
+        if not DRY_RUN:
+            ProvenanceStore(settings.provenance_ledger).log(
             "process_chemistry", 
             {"species": species}, 
             [input], 
             [out]
-        )
-        LineageStore(settings.lineage_ledger).log_sample(
+            )
+            LineageStore(settings.lineage_ledger).log_sample(
             sample_id="batch_fit", 
             source="lab_csv", 
             species=species, 
             method="fit_parameters", 
             calibration=payload, 
             file=input
-        )
+            )
         
     except Exception as e:
         _handle_error("chemistry processing", e)
@@ -169,26 +216,29 @@ def monitor_batch(
     try:
         # Validate input file
         input_path = _validate_file_exists(input, "monitoring CSV file")
+        _log_event("monitor_batch_start", input=str(input_path), out=out, has_permit=bool(permit))
         
-        console.print(f"[blue][MONITOR] Monitoring batch data for compliance...[/blue]")
+        if not QUIET:
+            console.print(f"[blue][MONITOR] Monitoring batch data for compliance...[/blue]")
         
         # Load and validate data
         df = pd.read_csv(input_path)
         if df.empty:
             console.print("[red][ERROR] Error: Input CSV file is empty[/red]")
-            raise typer.Exit(2)
+            raise ValidationError("Input CSV file is empty")
             
         # Load permit configuration
         if permit and not os.path.exists(permit):
             console.print(f"[red][ERROR] Error: Permit file not found: {permit}[/red]")
-            raise typer.Exit(2)
+            raise NotFoundError(f"Permit file not found: {permit}")
             
         p = load_permit(permit if permit else None)
-        console.print(f"[blue][INFO] Using {'custom permit' if permit else 'default permit limits'}[/blue]")
+        if not QUIET:
+            console.print(f"[blue][INFO] Using {'custom permit' if permit else 'default permit limits'}[/blue]")
         
         # Display permit limits
         limits = p.get("limits_mgL", p.get("limits", {}))
-        if limits:
+        if limits and not QUIET:
             table = Table(title="[DATA] Regulatory Limits (mg/L)")
             table.add_column("Species", style="bold")
             table.add_column("Limit", justify="right", style="cyan")
@@ -197,18 +247,25 @@ def monitor_batch(
             console.print(table)
         
         # Run compliance evaluation
-        console.print("[blue][COMPLIANCE] Evaluating permit compliance...[/blue]")
+        if not QUIET:
+            console.print("[blue][COMPLIANCE] Evaluating permit compliance...[/blue]")
         alerts = evaluate_permit(df, p)
+        _log_event("monitor_batch_evaluated", alert_count=len(alerts))
         
         payload = {"count": len(alerts), "alerts": alerts}
         
         # Save results
-        ensure_dir(os.path.dirname(out))
-        with open(out, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+        if DRY_RUN:
+            if not QUIET:
+                console.print(f"[yellow][DRY-RUN] Would write alerts to: {out}[/yellow]")
+        else:
+            ensure_dir(os.path.dirname(out))
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2)
+        _log_event("monitor_batch_end", out=out, dry_run=DRY_RUN)
             
         # Display results summary
-        if alerts:
+        if alerts and not QUIET:
             console.print(Panel.fit(
                 f"[yellow][WARNING] Non-Compliant: {len(alerts)} alert(s) detected[/yellow]\n\n"
                 f"Critical: [bold red]{len([a for a in alerts if a.get('level') == 'critical'])}[/bold red]\n"
@@ -247,7 +304,7 @@ def monitor_batch(
             
             if len(alerts) > 10:
                 console.print(f"[dim]... and {len(alerts) - 10} more alerts (see {out})[/dim]")
-        else:
+        elif not QUIET:
             console.print(Panel.fit(
                 f"[green][SUCCESS] Compliant: No limit exceedances detected[/green]\n\n"
                 f"All monitored species are within regulatory limits.\n"
@@ -257,12 +314,13 @@ def monitor_batch(
             ))
         
         # Log provenance
-        ProvenanceStore(settings.provenance_ledger).log(
+        if not DRY_RUN:
+            ProvenanceStore(settings.provenance_ledger).log(
             "monitor_batch", 
             {"permit": bool(permit)}, 
             [input] + ([permit] if permit else []), 
             [out]
-        )
+            )
         
     except Exception as e:
         _handle_error("batch monitoring", e)
@@ -284,21 +342,24 @@ def simulate_stream_cmd(
         # Validate input file
         if not source.exists():
             console.print(f"[red][ERROR] Error: Source CSV file not found: {source}[/red]")
-            raise typer.Exit(2)
+            raise NotFoundError(f"Source CSV file not found: {source}")
             
-        console.print(f"[blue][STREAM] Starting stream simulation from: {source}[/blue]")
+        if not QUIET:
+            console.print(f"[blue][STREAM] Starting stream simulation from: {source}[/blue]")
+        _log_event("simulate_stream_start", source=str(source), out=str(out) if out else None, publish_ws=publish_ws)
         
         # Validate CSV format
         df = pd.read_csv(source)
         required_cols = ["time", "species", "concentration"] 
         _validate_csv_format(df, required_cols, str(source))
         
-        console.print(f"[blue]⏱️ Delay: {delay}s per record | Records: {len(df)}[/blue]")
+        if not QUIET:
+            console.print(f"[blue]Delay: {delay}s per record | Records: {len(df)}[/blue]")
         
         # Generate streaming data
         rows = list(streaming_mod.simulate_stream(source, delay=delay))
         
-        if publish_ws:
+        if publish_ws and not DRY_RUN:
             console.print(f"[blue][PUBLISH] Publishing to WebSocket: {publish_ws}[/blue]")
             import websockets
             
@@ -315,35 +376,43 @@ def simulate_stream_cmd(
                                 console.print(f"[yellow][WARNING] WebSocket send error: {e}[/yellow]")
                                 continue
                                 
-                            if i % 10 == 0:  # Progress every 10 records
+                            if i % 10 == 0 and not QUIET:  # Progress every 10 records
                                 console.print(f"[dim][SENT] Sent {i+1}/{len(rows)} records[/dim]")
                                 
                     console.print(f"[green][SUCCESS] Published {len(rows)} records to WebSocket[/green]")
+                    _log_event("simulate_stream_publish_done", count=len(rows))
                 except Exception as e:
                     console.print(f"[red][ERROR] WebSocket connection failed: {e}[/red]")
-                    raise typer.Exit(1)
+                    _handle_error("websocket publish", e)
                     
             asyncio.run(_publish_stream())
             
-        elif out:
+        elif out and not DRY_RUN:
             # Write to JSONL file
             out.parent.mkdir(parents=True, exist_ok=True)
             with out.open("w", encoding="utf-8") as f:
                 for record in rows:
                     f.write(json.dumps(record) + "\n")
+            _log_event("simulate_stream_file_done", count=len(rows), out=str(out))
                     
-            console.print(Panel.fit(
+            if not QUIET:
+                console.print(Panel.fit(
                 f"[green][SUCCESS] Stream simulation completed![/green]\n\n"
                 f"Records: [bold]{len(rows)}[/bold]\n"
                 f"Output: [bold]{out}[/bold]\n"
                 f"Format: JSONL (one JSON record per line)",
                 title="[REPORT] File Output"
-            ))
+                ))
+        elif out and DRY_RUN:
+            if not QUIET:
+                console.print(f"[yellow][DRY-RUN] Would write stream JSONL to: {out}[/yellow]")
         else:
             # Print to stdout
-            console.print("[blue][DISPLAY] Streaming to stdout (use --out to save or --publish-ws to stream)[/blue]")
+            if not QUIET:
+                console.print("[blue][DISPLAY] Streaming to stdout (use --out to save or --publish-ws to stream)[/blue]")
             for record in rows:
                 print(json.dumps(record))
+            _log_event("simulate_stream_stdout_done", count=len(rows))
                 
     except Exception as e:
         _handle_error("stream simulation", e)
@@ -365,7 +434,8 @@ def cert(
         # Validate alerts file
         alerts_path = _validate_file_exists(alerts, "alerts JSON file")
         
-        console.print(f"[blue][INFO] Generating compliance certificate for site: {site}[/blue]")
+        if not QUIET:
+            console.print(f"[blue][INFO] Generating compliance certificate for site: {site}[/blue]")
         
         # Load and validate alerts data
         with open(alerts_path, "r", encoding="utf-8") as f:
@@ -378,12 +448,13 @@ def cert(
         elif isinstance(payload, list):
             alert_list = payload
             console.print(f"[blue][DATA] Found {len(alert_list)} alerts in array format[/blue]")
-    else:
+        else:
             console.print("[red][ERROR] Error: Invalid alerts file format - expected array or object with 'alerts' key[/red]")
-            raise typer.Exit(2)
+            raise ValidationError("Invalid alerts file format")
             
         # Generate certificate
-        console.print("[blue][GENERATE] Generating compliance certificate...[/blue]")
+        if not QUIET:
+            console.print("[blue][GENERATE] Generating compliance certificate...[/blue]")
         cert_path = generate_certificate(
             alert_list, 
             site=site, 
@@ -396,7 +467,8 @@ def cert(
         status_color = "red" if alert_list else "green"
         status_icon = "[ERROR]" if alert_list else "[SUCCESS]"
         
-        console.print(Panel.fit(
+        if not QUIET:
+            console.print(Panel.fit(
             f"[{status_color}]{status_icon} {status}[/{status_color}]\n\n"
             f"Site: [bold]{site}[/bold]\n"
             f"Alerts: [bold]{len(alert_list)}[/bold]\n"
@@ -404,15 +476,16 @@ def cert(
             f"Period: [bold]{period or 'Current'}[/bold]",
             title="[INFO] Compliance Certificate Generated",
             border_style=status_color
-        ))
+            ))
         
         # Log provenance
-        ProvenanceStore(settings.provenance_ledger).log(
+        if not DRY_RUN:
+            ProvenanceStore(settings.provenance_ledger).log(
             "certificate", 
             {"site": site, "period": period}, 
             [alerts], 
             [out]
-        )
+            )
         
     except Exception as e:
         _handle_error("certificate generation", e)
@@ -531,29 +604,33 @@ def dashboard(
     and interactive compliance visualization.
     """
     try:
-        console.print(f"[blue][WEB] Dashboard configuration[/blue]")
-        console.print(f"  Host: [bold]{host}[/bold]")
-        console.print(f"  Port: [bold]{port}[/bold]")
-        console.print(f"  URL: [bold blue]http://{host}:{port}[/bold blue]")
+        if not QUIET:
+            console.print(f"[blue][WEB] Dashboard configuration[/blue]")
+            console.print(f"  Host: [bold]{host}[/bold]")
+            console.print(f"  Port: [bold]{port}[/bold]")
+            console.print(f"  URL: [bold blue]http://{host}:{port}[/bold blue]")
         
         if not serve:
-            console.print(Panel.fit(
+            if not QUIET:
+                console.print(Panel.fit(
                 "[green][SUCCESS] Configuration validated successfully[/green]\n\n"
                 f"Dashboard would run at: http://{host}:{port}\n"
                 "Use --serve to actually start the server.",
                 title="[ADVICE] Configuration Check"
-            ))
+                ))
             return
             
         console.print(f"[blue][START] Starting dashboard server{'with auto-reload' if reload else ''}...[/blue]")
         
         try:
             import uvicorn
+            from .logging import uvicorn_log_config
             
             # Build the app
             app_instance = build_dashboard_app()
             
-            console.print(Panel.fit(
+            if not QUIET:
+                console.print(Panel.fit(
                 f"[green][WEB] Dashboard server starting...[/green]\n\n"
                 f"[WEB] Web Interface: [bold blue]http://{host}:{port}[/bold blue]\n"
                 f"[DATA] API Docs: [bold blue]http://{host}:{port}/docs[/bold blue]\n"
@@ -561,26 +638,29 @@ def dashboard(
                 f"[dim]Press Ctrl+C to stop the server[/dim]",
                 title="[WEB] OpenWorld Dashboard",
                 border_style="blue"
-            ))
+                ))
             
             # Run the server
+            json_fmt = (os.getenv("LOG_FORMAT", "text").lower() == "json")
             uvicorn.run(
                 app_instance, 
                 host=host, 
                 port=port, 
                 reload=reload,
-                log_level="info" if not reload else "debug"
+                log_level="info" if not reload else "debug",
+                access_log=True,
+                log_config=uvicorn_log_config(json_fmt) or None,
             )
             
-        except ImportError:
+        except ImportError as e:
             console.print("[red][ERROR] Error: uvicorn not available. Install with: pip install uvicorn[/red]")
-            raise typer.Exit(1)
+            _handle_error("dashboard dependency", e)
         except OSError as e:
             if "Address already in use" in str(e):
                 console.print(f"[red][ERROR] Error: Port {port} is already in use. Try a different port with --port[/red]")
             else:
                 console.print(f"[red][ERROR] Network error: {e}[/red]")
-            raise typer.Exit(1)
+            _handle_error("dashboard network", e)
             
     except KeyboardInterrupt:
         console.print("\n[yellow][STOPPED] Dashboard server stopped by user[/yellow]")
@@ -602,5 +682,3 @@ def version():
 
 if __name__ == "__main__":
     app()
-
-

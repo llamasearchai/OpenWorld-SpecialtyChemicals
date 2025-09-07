@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openworld-specialty-chemicals"
-version = "0.1.0"
+version = "0.2.0"
 description = "Monitoring platform for specialty-chemicals effluents: compliance, streaming, modeling, and dashboards"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,6 +43,8 @@ dev = [
   "pip-audit==2.7.3",
   "build==1.2.1",
   "hypothesis==6.112.1",
+  "pre-commit==3.8.0",
+  "redis==5.0.7",
 ]
 ai = ["openai==1.40.0"]
 all = [
@@ -51,7 +53,7 @@ all = [
   "fastapi==0.114.2","uvicorn==0.30.6","jinja2==3.1.4",
   "sqlite-utils==3.36.0",
   "python-dotenv==1.0.1","httpx==0.27.0","starlette==0.38.5",
-  "openai==1.40.0"
+  "openai==1.40.0","redis==5.0.7"
 ]
 
 [project.scripts]

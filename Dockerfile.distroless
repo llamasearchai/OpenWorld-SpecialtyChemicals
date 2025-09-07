@@ -1,0 +1,24 @@
+# Distroless production image (optional)
+
+FROM python:3.11-slim AS builder
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+WORKDIR /src
+RUN pip install --upgrade pip uv
+COPY pyproject.toml hatch.toml README.md LICENSE ./
+COPY openworld_specialty_chemicals ./openworld_specialty_chemicals
+RUN uv pip install .[all] --target /opt/app
+
+FROM gcr.io/distroless/python3-debian12:3.11
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/app
+WORKDIR /app
+COPY --from=builder /opt/app /opt/app
+
+# Distroless runs as non-root by default; expose port and set volumes
+EXPOSE 8000
+VOLUME ["/app/data","/app/artifacts","/app/reports","/app/logs","/app/provenance","/app/lineage"]
+
+CMD ["-m","openworld_specialty_chemicals.cli","dashboard","--host","0.0.0.0","--port","8000"]

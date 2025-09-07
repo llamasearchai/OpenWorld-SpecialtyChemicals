@@ -1,0 +1,16 @@
+1. Get the application URL by running these commands:
+
+{{- if .Values.ingress.enabled }}
+  http{{ if (index .Values.ingress.tls 0) }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
+{{- else }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/name={{ include "openworld-specialty-chemicals.name" . }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl port-forward $POD_NAME 8000:8000
+  Then access: http://127.0.0.1:8000
+{{- end }}
+
+2. API Token (if configured):
+   Set header `Authorization: Bearer <token>` for `/api/*` and WebSockets.
+
+3. Metrics endpoint:
+   If protected, use the metrics token in the same header to access `/metrics`.
+

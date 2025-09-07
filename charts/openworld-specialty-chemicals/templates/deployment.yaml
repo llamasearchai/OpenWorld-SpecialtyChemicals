@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openworld-specialty-chemicals.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "openworld-specialty-chemicals.name" . }}
+    helm.sh/chart: {{ include "openworld-specialty-chemicals.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "openworld-specialty-chemicals.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "openworld-specialty-chemicals.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: LOG_FORMAT
+              value: {{ .Values.env.LOG_FORMAT | quote }}
+            - name: OW_SC_RL_PER_SEC
+              value: {{ .Values.env.OW_SC_RL_PER_SEC | quote }}
+            - name: OW_SC_WS_MSGS_PER_SEC
+              value: {{ .Values.env.OW_SC_WS_MSGS_PER_SEC | quote }}
+            - name: OW_SC_WS_MAX_MESSAGE_BYTES
+              value: {{ .Values.env.OW_SC_WS_MAX_MESSAGE_BYTES | quote }}
+            - name: OW_SC_MAX_CSV_BYTES
+              value: {{ .Values.env.OW_SC_MAX_CSV_BYTES | quote }}
+            - name: OW_SC_MAX_CSV_ROWS
+              value: {{ .Values.env.OW_SC_MAX_CSV_ROWS | quote }}
+            - name: OW_SC_CORS_ORIGINS
+              value: {{ .Values.env.OW_SC_CORS_ORIGINS | quote }}
+            {{- if .Values.secrets.apiToken }}
+            - name: OW_SC_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openworld-specialty-chemicals.fullname" . }}
+                  key: api-token
+            {{- end }}
+            {{- if .Values.secrets.metricsProtect }}
+            - name: OW_SC_METRICS_PROTECT
+              value: "1"
+            {{- if .Values.secrets.metricsToken }}
+            - name: OW_SC_METRICS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openworld-specialty-chemicals.fullname" . }}
+                  key: metrics-token
+            {{- end }}
+            {{- end }}
+            {{- if .Values.secrets.redisUrl }}
+            - name: OW_SC_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openworld-specialty-chemicals.fullname" . }}
+                  key: redis-url
+            - name: OW_SC_REDIS_CHANNEL
+              value: {{ .Values.secrets.redisChannel | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources: {{- toYaml .Values.resources | nindent 12 }}

@@ -1,16 +1,14 @@
 ## Contributing to OpenWorld-SpecialtyChemicals
 
-Thank you for your interest in contributing! This guide describes how to set up your environment, run tests, and submit high‑quality pull requests that pass all checks.
+Thank you for your interest in contributing! This guide describes how to set up your environment, run tests, and submit high-quality pull requests that pass all checks.
 
 ### 1) Prerequisites
 - Python 3.10+
 - `uv` (fast installer) or `pip`
 - Optional: `pre-commit`, `docker` for container workflows
 
-### 2) Clone and setup
+### 2) Setup
 ```
-git clone https://github.com/username/OpenWorld-SpecialtyChemicals.git
-cd OpenWorld-SpecialtyChemicals
 uv venv
 uv pip install -e ".[dev]"
 ```
@@ -81,4 +79,3 @@ GitHub Actions runs lint, type-checks, and tests on pushes and PRs (`.github/wor
 - Use GitHub Issues with a clear reproduction, expected vs actual, logs, and environment details.
 
 Happy hacking!
-

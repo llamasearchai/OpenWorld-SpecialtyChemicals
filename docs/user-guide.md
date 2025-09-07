@@ -20,3 +20,8 @@ uv pip install -e ".[all]"
 ## Shell Completion
 `openworld-chem --install-completion` to install shell completion.
 
+## Security & Access
+
+- Protect API and WebSockets by setting `OW_SC_API_TOKEN`. Clients must send `Authorization: Bearer <token>`.
+- Protect metrics endpoint by setting `OW_SC_METRICS_PROTECT=1` (optional) and `OW_SC_METRICS_TOKEN` (or reuse `OW_SC_API_TOKEN`).
+- Rate limiting: `OW_SC_RL_PER_SEC` for HTTP `/api/*`, `OW_SC_WS_MSGS_PER_SEC` and `OW_SC_WS_MAX_MESSAGE_BYTES` for WebSockets.

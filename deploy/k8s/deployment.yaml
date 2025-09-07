@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ows-chem
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ows-chem
+  template:
+    metadata:
+      labels:
+        app: ows-chem
+    spec:
+      containers:
+        - name: app
+          image: your-dockerhub-user/openworld-specialty-chemicals:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: LOG_FORMAT
+              value: text
+            - name: OW_SC_RL_PER_SEC
+              value: "10"
+            - name: OW_SC_WS_MSGS_PER_SEC
+              value: "20"
+            - name: OW_SC_WS_MAX_MESSAGE_BYTES
+              value: "8192"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8000

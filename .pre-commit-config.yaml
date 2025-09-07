@@ -21,3 +21,15 @@ repos:
     rev: v2.7.3
     hooks:
       - id: pip-audit
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.11.0
+    hooks:
+      - id: helm-docs
+        args: ["--chart-search-root=charts"]
+  - repo: local
+    hooks:
+      - id: helm-lint
+        name: helm lint
+        entry: bash -lc 'command -v helm >/dev/null 2>&1 && helm lint charts/openworld-specialty-chemicals || echo "helm not installed; skipping helm lint"'
+        language: system
+        files: ^charts/openworld-specialty-chemicals/

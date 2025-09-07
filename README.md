@@ -114,9 +114,12 @@ openworld-chem advise --alerts artifacts/alerts.json --site "Plant A"
 ## Docs
 - Local site: `make docs` then open `site/index.html`
 - Guides live in `docs/` and architecture in `ARCHITECTURE.md`
+- Data requirements: see `docs/data_requirements.md`
 
 ## Security
 - See `SECURITY.md` for guidance on secrets, dependency scanning, and prompt-injection defenses.
+- API protection: set `OW_SC_API_TOKEN` to require `Authorization: Bearer <token>` for `/api/*` and WebSocket endpoints.
+- Rate limiting: configure `OW_SC_RL_PER_SEC` (default 10) for HTTP `/api/*`; `OW_SC_WS_MSGS_PER_SEC` (default 20) and `OW_SC_WS_MAX_MESSAGE_BYTES` (default 8192) for WebSockets.
 
 ## Linting
 See [Contributing Guide](CONTRIBUTING.md) for detailed linting and development workflow instructions.
@@ -127,10 +130,18 @@ make docker-build
 make docker-run  # serves on http://localhost:8000
 ```
 
+## Releases
+
+- Bump version: `python scripts/release_bump.py <version>` then update `CHANGELOG.md` section.
+- Tag and push: `git tag v<version> && git push origin v<version>`.
+- GitHub Actions will: build wheels/sdist, optionally publish to PyPI (if `PYPI_API_TOKEN` secret is set), and build/push Docker images (if Docker Hub secrets are set).
+
+See `CHANGELOG.md` for release notes.
+
 ## System Status [COMPLETE]
 
 ### [COMPLETE] Fully Implemented and Tested
-- **Complete E2E Pipeline**: Data ingestion → Chemistry fitting → Compliance monitoring → Certificate generation → AI advice
+- **Complete E2E Pipeline**: Data ingestion -> Chemistry fitting -> Compliance monitoring -> Certificate generation -> AI advice
 - **High Test Coverage**: Currently at 44% with comprehensive test suite (72 test cases)
 - **Production Ready**: All core modules functional, event loops fixed, CLI commands working
 - **Demo Script**: `python scripts/demo_complete_workflow.py` runs complete workflow
@@ -155,10 +166,7 @@ make docker-run  # serves on http://localhost:8000
 
 ## Repository Information
 
-- **Repository**: [GitHub - username/OpenWorld-SpecialtyChemicals](https://github.com/username/OpenWorld-SpecialtyChemicals)
-- **Documentation**: [Live Documentation](https://username.github.io/OpenWorld-SpecialtyChemicals/)
-- **Issues**: [GitHub Issues](https://github.com/username/OpenWorld-SpecialtyChemicals/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/username/OpenWorld-SpecialtyChemicals/discussions)
+Use your project's GitHub repository for issues, discussions, and live documentation. Update links here once published.
 
 ## Contributing
 
@@ -172,10 +180,6 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 ### Development Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/username/OpenWorld-SpecialtyChemicals.git
-cd OpenWorld-SpecialtyChemicals
-
 # Create virtual environment
 uv venv
 source .venv/bin/activate
@@ -248,7 +252,7 @@ A: Check that port 8000 is available and not blocked by firewall. Use `openworld
 **Q: Streaming data not publishing?**
 A: Verify WebSocket URL and ensure the dashboard is running before starting the stream.
 
-For more help, see [GitHub Issues](https://github.com/username/OpenWorld-SpecialtyChemicals/issues) or [Discussions](https://github.com/username/OpenWorld-SpecialtyChemicals/discussions).
+For more help, open an issue in your repository and include logs, steps to reproduce, and environment details.
 
 ## License
 

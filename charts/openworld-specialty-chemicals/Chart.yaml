@@ -1,0 +1,6 @@
+apiVersion: v2
+name: openworld-specialty-chemicals
+description: Monitoring platform dashboard and CLI server
+type: application
+version: 0.1.0
+appVersion: "0.2.0"

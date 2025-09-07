@@ -1,0 +1,7 @@
+charts:
+  - charts/openworld-specialty-chemicals
+templates:
+  - sections: [header, description, values, usage, maintainers]
+    values:
+      - name: Values
+        path: values.yaml

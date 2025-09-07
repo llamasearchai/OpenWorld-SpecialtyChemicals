@@ -1,0 +1,45 @@
+name: Chart CI
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - '.github/workflows/chart-ci.yml'
+
+jobs:
+  lint-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Helm lint
+        run: helm lint charts/openworld-specialty-chemicals
+
+      - name: Generate helm-docs
+        uses: jnorwood/helm-docs@v1.11.0
+        with:
+          chart-search-root: charts
+
+      - name: Fail if docs changed
+        run: |
+          if ! git diff --quiet -- charts/openworld-specialty-chemicals/README.md; then
+            echo "helm-docs generated changes. Commit them." >&2
+            git --no-pager diff -- charts/openworld-specialty-chemicals/README.md
+            exit 1
+          fi
+
+      - name: Package chart
+        run: |
+          mkdir -p dist-charts
+          helm package charts/openworld-specialty-chemicals -d dist-charts
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: dist-charts/*.tgz
