@@ -1,4 +1,5 @@
 import pytest
+
 from openworld_specialty_chemicals.dashboard import build_app
 
 

@@ -1,7 +1,15 @@
 from __future__ import annotations
-import json, os, time, hashlib, getpass, socket, subprocess
-from dataclasses import dataclass, asdict
+
+import getpass
+import hashlib
+import json
+import os
+import socket
+import subprocess
+import time
+from dataclasses import asdict, dataclass
 from typing import Any
+
 
 @dataclass
 class ProvenanceRecord:
@@ -33,7 +41,13 @@ class ProvenanceStore:
         h.update(json.dumps(payload, sort_keys=True, default=str).encode())
         return h.hexdigest()
 
-    def log(self, step: str, params: dict[str, Any], inputs: list[str], outputs: list[str]) -> ProvenanceRecord:
+    def log(
+        self,
+        step: str,
+        params: dict[str, Any],
+        inputs: list[str],
+        outputs: list[str]
+    ) -> ProvenanceRecord:
         rec_base = {
             "timestamp": time.time(),
             "actor": getpass.getuser(),

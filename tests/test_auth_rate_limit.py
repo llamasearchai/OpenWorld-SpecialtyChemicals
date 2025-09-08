@@ -1,4 +1,3 @@
-import time
 from fastapi.testclient import TestClient
 
 from openworld_specialty_chemicals.dashboard import build_app

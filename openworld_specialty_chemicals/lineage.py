@@ -1,7 +1,12 @@
 from __future__ import annotations
-import json, os, time, hashlib
-from dataclasses import dataclass, asdict
+
+import hashlib
+import json
+import os
+import time
+from dataclasses import asdict, dataclass
 from typing import Any, Dict
+
 
 @dataclass
 class SampleLineage:
@@ -21,12 +26,20 @@ class LineageStore:
         self.ledger_path = ledger_path
 
     def _digest(self, obj: dict) -> str:
-        import hashlib, json
+        import json
         h = hashlib.sha256()
         h.update(json.dumps(obj, sort_keys=True, default=str).encode())
         return h.hexdigest()
 
-    def log_sample(self, sample_id: str, source: str, species: str, method: str, calibration: Dict[str, Any], file: str) -> SampleLineage:
+    def log_sample(
+        self,
+        sample_id: str,
+        source: str,
+        species: str,
+        method: str,
+        calibration: Dict[str, Any],
+        file: str
+    ) -> SampleLineage:
         base = {
             "timestamp": time.time(),
             "sample_id": sample_id,

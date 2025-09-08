@@ -3,15 +3,15 @@
 Complete workflow demonstration for OpenWorld Specialty Chemicals monitoring system.
 This script demonstrates the end-to-end process from data ingestion to compliance reporting.
 """
-import os
 import json
-import pandas as pd
-from pathlib import Path
+import os
 
-from openworld_specialty_chemicals.chemistry import fit_parameters
-from openworld_specialty_chemicals.rules import check_permit
-from openworld_specialty_chemicals.reporting import generate_certificate
+import pandas as pd
+
 from openworld_specialty_chemicals.agents.fake_agent import FakeAdviceAgent
+from openworld_specialty_chemicals.chemistry import fit_parameters
+from openworld_specialty_chemicals.reporting import generate_certificate
+from openworld_specialty_chemicals.rules import check_permit
 
 
 def create_demo_data():
@@ -70,7 +70,10 @@ def monitor_compliance(df, fit_data):
 
     print(f"[SUCCESS] Compliance monitoring completed: {len(alerts)} alerts generated")
     for alert in alerts:
-        print(f"   - {alert['species']}: {alert['value']:.1f} mg/L exceeds {alert['limit']:.1f} mg/L")
+        print(
+            f"   - {alert['species']}: {alert['value']:.1f} mg/L "
+            f"exceeds {alert['limit']:.1f} mg/L"
+        )
 
     return alerts
 
@@ -121,10 +124,10 @@ def main():
         alerts = monitor_compliance(df, fit_data)
 
         # Step 4: Generate certificate
-        certificate = generate_compliance_certificate(alerts)
+        _ = generate_compliance_certificate(alerts)
 
         # Step 5: Get advice
-        advice = get_advice_recommendations(alerts)
+        _ = get_advice_recommendations(alerts)
 
         print("\n" + "=" * 60)
         print("[SUCCESS] Complete workflow demonstration successful!")

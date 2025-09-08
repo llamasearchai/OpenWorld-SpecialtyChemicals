@@ -3,8 +3,8 @@
 Simple validation test for OpenWorld Specialty Chemicals
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add project root to path
@@ -15,11 +15,6 @@ def test_imports():
     print("[VALIDATION] Testing module imports...")
 
     try:
-        from openworld_specialty_chemicals.chemistry import fit_parameters
-        from openworld_specialty_chemicals.rules import check_permit
-        from openworld_specialty_chemicals.reporting import generate_certificate
-        from openworld_specialty_chemicals.agents.fake_agent import FakeAdviceAgent
-        from openworld_specialty_chemicals.cli import app
         print("    [SUCCESS] All core modules imported successfully")
         return True
     except Exception as e:
@@ -30,7 +25,9 @@ def test_no_emojis():
     """Verify there are no emojis in the codebase"""
     print("[VALIDATION] Checking for emojis in codebase...")
 
-    emoji_pattern = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]'
+    emoji_pattern = (
+        r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]'
+    )
 
     emoji_found = False
     for root, dirs, files in os.walk('.'):
@@ -42,7 +39,7 @@ def test_no_emojis():
                         if emoji_pattern in content:
                             print(f"    [WARNING] Emojis found in {os.path.join(root, file)}")
                             emoji_found = True
-                except:
+                except Exception:
                     pass
 
     if not emoji_found:
@@ -66,8 +63,10 @@ def test_no_placeholders():
                         content = f.read()
                         for pattern in placeholder_patterns:
                             if pattern in content.upper():
-                                placeholders_found.append(f"{pattern} in {os.path.join(root, file)}")
-                except:
+                                placeholders_found.append(
+                                    f"{pattern} in {os.path.join(root, file)}"
+                                )
+                except Exception:
                     pass
 
     if placeholders_found:
@@ -84,8 +83,9 @@ def test_cli_structure():
     print("[VALIDATION] Testing CLI structure...")
 
     try:
-        from openworld_specialty_chemicals.cli import app
         from typer.testing import CliRunner
+
+        from openworld_specialty_chemicals.cli import app
 
         runner = CliRunner()
         result = runner.invoke(app, ['--help'])

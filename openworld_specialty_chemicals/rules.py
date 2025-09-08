@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import List, Dict, Any
+
+from typing import Any, Dict, List
+
 import pandas as pd
 
 
@@ -43,7 +45,8 @@ def check_permit(df: pd.DataFrame, permit: Dict[str, Any]) -> List[Dict[str, Any
                         "value": last_rm,
                         "limit": float(limit),
                         "level": _severity(last_rm, float(limit)),
-                        "message": f"{sp} rolling mean {last_rm:.3f} over window {window} exceeds limit {float(limit):.3f}",
+                        "message": f"{sp} rolling mean {last_rm:.3f} over window {window} "
+                        f"exceeds limit {float(limit):.3f}",
                     })
         except Exception:
             pass

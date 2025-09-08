@@ -1,5 +1,11 @@
 import numpy as np
-from openworld_specialty_chemicals.chemistry.sorption_decay import SorptionDecayParams, effective_rate, predict_concentration
+
+from openworld_specialty_chemicals.chemistry.sorption_decay import (
+    SorptionDecayParams,
+    effective_rate,
+    predict_concentration,
+)
+
 
 def test_effective_rate_monotonic_with_Kd():
     p1 = SorptionDecayParams(Kd_L_per_kg=0.0, k_per_h=0.02, V_m3=10.0, m_solid_kg=50.0)

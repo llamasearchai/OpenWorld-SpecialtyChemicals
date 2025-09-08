@@ -1,5 +1,6 @@
-from openworld_specialty_chemicals.provenance import ProvenanceStore
 from openworld_specialty_chemicals.lineage import LineageStore
+from openworld_specialty_chemicals.provenance import ProvenanceStore
+
 
 def test_provenance_and_lineage(tmp_path):
     prov_path = tmp_path / "prov/ledger.jsonl"

@@ -4,18 +4,19 @@ Comprehensive CLI Demo for OpenWorld Specialty Chemicals
 Validates complete functionality of the command line interface
 """
 
+import json
 import os
 import sys
-import json
-import tempfile
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 from typer.testing import CliRunner
 
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from openworld_specialty_chemicals.cli import app
+
 
 def create_demo_data():
     """Create sample effluent data for demonstration."""
@@ -59,7 +60,7 @@ def run_cli_command(command, args, description):
     result = runner.invoke(app, command + args)
 
     if result.exit_code == 0:
-        print(f"    [SUCCESS] Command executed successfully")
+        print("    [SUCCESS] Command executed successfully")
         if result.stdout:
             print(f"    Output preview: {result.stdout[:100]}...")
         return True
@@ -76,8 +77,8 @@ def main():
 
     try:
         # Step 1: Create demo data
-        df = create_demo_data()
-        permit_data = create_demo_permit()
+        _ = create_demo_data()
+        _ = create_demo_permit()
 
         # Step 2: Test CLI commands
         print("\n" + "-" * 50)
@@ -93,7 +94,11 @@ def main():
         # Test 2: Process chemistry
         success = run_cli_command(
             ["process-chemistry"],
-            ["--input", "data/demo_batch.csv", "--species", "SO4", "--out", "artifacts/demo_fit.json"],
+            [
+                "--input", "data/demo_batch.csv",
+                "--species", "SO4",
+                "--out", "artifacts/demo_fit.json"
+            ],
             "Testing chemistry parameter fitting"
         )
         if not success:
@@ -103,7 +108,11 @@ def main():
         # Test 3: Monitor batch
         success = run_cli_command(
             ["monitor-batch"],
-            ["--input", "data/demo_batch.csv", "--permit", "permits/demo_permit.json", "--out", "artifacts/demo_alerts.json"],
+            [
+                "--input", "data/demo_batch.csv",
+                "--permit", "permits/demo_permit.json",
+                "--out", "artifacts/demo_alerts.json"
+            ],
             "Testing batch compliance monitoring"
         )
         if not success:
@@ -113,7 +122,11 @@ def main():
         # Test 4: Generate certificate
         success = run_cli_command(
             ["cert"],
-            ["--alerts", "artifacts/demo_alerts.json", "--site", "Demo Plant", "--out", "reports/demo_certificate.html"],
+            [
+                "--alerts", "artifacts/demo_alerts.json",
+                "--site", "Demo Plant",
+                "--out", "reports/demo_certificate.html"
+            ],
             "Testing compliance certificate generation"
         )
         if not success:
@@ -133,7 +146,11 @@ def main():
         # Test 6: Simulate streaming
         success = run_cli_command(
             ["simulate-stream"],
-            ["--source", "data/demo_batch.csv", "--delay", "0.0", "--out", "artifacts/demo_stream.jsonl"],
+            [
+                "--source", "data/demo_batch.csv",
+                "--delay", "0.0",
+                "--out", "artifacts/demo_stream.jsonl"
+            ],
             "Testing stream simulation"
         )
         if not success:
@@ -185,7 +202,7 @@ def main():
             if all(key in fit_data for key in required_keys):
                 print(f"    [SUCCESS] Chemistry fit contains: {fit_data}")
             else:
-                print(f"    [ERROR] Chemistry fit missing required keys")
+                print("    [ERROR] Chemistry fit missing required keys")
                 return False
 
         # Check alerts
@@ -195,16 +212,22 @@ def main():
             if isinstance(alerts, list) and len(alerts) > 0:
                 print(f"    [SUCCESS] Found {len(alerts)} alerts")
                 for alert in alerts[:2]:  # Show first 2 alerts
-                    print(f"        - {alert.get('species', 'Unknown')}: {alert.get('value', 0):.1f} mg/L")
+                    print(
+                        f"        - {alert.get('species', 'Unknown')}: "
+                        f"{alert.get('value', 0):.1f} mg/L"
+                    )
             else:
-                print(f"    [ERROR] Invalid alerts format")
+                print("    [ERROR] Invalid alerts format")
                 return False
 
         # Check certificate
         if os.path.exists("reports/demo_certificate.html"):
             with open("reports/demo_certificate.html") as f:
                 html_content = f.read()
-            if "Demo Plant" in html_content and ("NON-COMPLIANT" in html_content or "COMPLIANT" in html_content):
+            if (
+                "Demo Plant" in html_content
+                and ("NON-COMPLIANT" in html_content or "COMPLIANT" in html_content)
+            ):
                 print("    [SUCCESS] Certificate contains proper site and status information")
             else:
                 print("    [ERROR] Certificate missing required information")

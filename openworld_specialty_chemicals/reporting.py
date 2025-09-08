@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Dict
+
+from typing import Dict, List
 
 
 def generate_certificate(alerts: List[Dict], site: str) -> str:

@@ -1,6 +1,9 @@
 from __future__ import annotations
-import numpy as np
+
 from dataclasses import dataclass
+
+import numpy as np
+
 
 @dataclass
 class SorptionDecayParams:
@@ -10,7 +13,7 @@ class SorptionDecayParams:
     m_solid_kg: float    # mass of solids (kg)
 
 def effective_rate(params: SorptionDecayParams) -> float:
-    """
+    r"""
     For batch reactor with linear sorption:
     Total capacity factor: phi = V + m_solid * Kd (treating units consistent with mg/L, L, kg).
     Effective decay on aqueous concentration:
@@ -20,7 +23,11 @@ def effective_rate(params: SorptionDecayParams) -> float:
     phi_L = V_L + params.m_solid_kg * params.Kd_L_per_kg
     return params.k_per_h * (V_L / max(1e-9, phi_L))
 
-def predict_concentration(t_h: np.ndarray, C0_mgL: float, params: SorptionDecayParams) -> np.ndarray:
+def predict_concentration(
+    t_h: np.ndarray,
+    C0_mgL: float,
+    params: SorptionDecayParams
+) -> np.ndarray:
     keff = effective_rate(params)
     return C0_mgL * np.exp(-keff * t_h)
 

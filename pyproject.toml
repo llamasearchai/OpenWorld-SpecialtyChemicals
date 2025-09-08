@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openworld-specialty-chemicals"
-version = "0.2.0"
+version = "0.2.1"
 description = "Monitoring platform for specialty-chemicals effluents: compliance, streaming, modeling, and dashboards"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-authors = [{name="Nik Jois", email="nikjois@llamasearch.ai"}]
+authors = [{name="Nik Jois"}]
 dependencies = [
   "numpy==1.26.4",
   "pandas==2.2.2",

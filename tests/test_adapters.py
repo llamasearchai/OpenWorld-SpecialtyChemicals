@@ -1,7 +1,10 @@
-import pandas as pd
 import asyncio
+
+import pandas as pd
+
 from openworld_specialty_chemicals.adapters.batch_csv import ingest_batch_csv
 from openworld_specialty_chemicals.adapters.streaming import stream_csv_rows
+
 
 def test_ingest_batch_csv(tmp_path):
     p = tmp_path / "b.csv"

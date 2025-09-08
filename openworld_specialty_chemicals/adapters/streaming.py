@@ -1,6 +1,9 @@
 from __future__ import annotations
-import asyncio, csv, json
+
+import asyncio
+import csv
 from typing import AsyncIterator
+
 
 async def stream_csv_rows(path: str, delay_s: float = 0.1) -> AsyncIterator[dict]:
     with open(path, "r", encoding="utf-8") as f:

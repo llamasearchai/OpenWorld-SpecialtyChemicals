@@ -1,6 +1,9 @@
-from fastapi.testclient import TestClient
-from openworld_specialty_chemicals.dashboard.server import app, broadcaster
 import asyncio
+
+from fastapi.testclient import TestClient
+
+from openworld_specialty_chemicals.dashboard.server import app, broadcaster
+
 
 def test_dashboard_health_and_ws():
     c = TestClient(app)

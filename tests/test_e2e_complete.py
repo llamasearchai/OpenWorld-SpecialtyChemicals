@@ -1,16 +1,14 @@
 import json
-import tempfile
-import os
 from pathlib import Path
+
 import pandas as pd
 from typer.testing import CliRunner
 
-from openworld_specialty_chemicals.cli import app
-from openworld_specialty_chemicals.chemistry import fit_parameters
-from openworld_specialty_chemicals.rules import check_permit
-from openworld_specialty_chemicals.reporting import generate_certificate
 from openworld_specialty_chemicals.agents.fake_agent import FakeAdviceAgent
-
+from openworld_specialty_chemicals.chemistry import fit_parameters
+from openworld_specialty_chemicals.cli import app
+from openworld_specialty_chemicals.reporting import generate_certificate
+from openworld_specialty_chemicals.rules import check_permit
 
 runner = CliRunner()
 

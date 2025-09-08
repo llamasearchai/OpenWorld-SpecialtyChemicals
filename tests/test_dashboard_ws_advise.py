@@ -1,8 +1,5 @@
-import asyncio
-import json
 from typing import Any, Dict
 
-import pytest
 from fastapi.testclient import TestClient
 
 from openworld_specialty_chemicals.dashboard import build_app
@@ -40,6 +37,6 @@ def test_ws_buffer_and_advise():
     r = c.post("/advise", json=payload)
     data: Dict[str, Any] = r.json()
     assert r.status_code == 200 and isinstance(data.get("actions"), list)
-    assert any("SO4" in a for a in data["actions"]) or any("As" in a for a in data["actions"]) 
+    assert any("SO4" in a for a in data["actions"]) or any("As" in a for a in data["actions"])
 
 

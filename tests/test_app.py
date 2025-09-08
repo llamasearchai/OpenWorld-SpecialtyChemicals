@@ -1,4 +1,3 @@
-import io
 import json
 from pathlib import Path
 
@@ -8,9 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
 
-from openworld_specialty_chemicals import chemistry, dashboard, io as io_mod, reporting, rules, streaming
+from openworld_specialty_chemicals import chemistry, dashboard, reporting, rules, streaming
+from openworld_specialty_chemicals import io as io_mod
 from openworld_specialty_chemicals.cli import app as cli_app
-
 
 runner = CliRunner()
 
@@ -116,7 +115,9 @@ def test_dashboard_app_health():
 def test_reporting_certificate():
     html = reporting.generate_certificate([], site="Plant A")
     assert "COMPLIANT" in html and "Plant A" in html
-    html2 = reporting.generate_certificate([{"time": 0, "species": "SO4", "value": 5, "limit": 1}], site="B")
+    html2 = reporting.generate_certificate(
+        [{"time": 0, "species": "SO4", "value": 5, "limit": 1}], site="B"
+    )
     assert "NON-COMPLIANT" in html2 and "SO4" in html2
 
 

@@ -1,9 +1,9 @@
-from pathlib import Path
 import json
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from openworld_specialty_chemicals.cli import app
-
 
 runner = CliRunner()
 

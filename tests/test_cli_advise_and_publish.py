@@ -1,12 +1,11 @@
 import json
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 from typer.testing import CliRunner
 
 from openworld_specialty_chemicals.cli import app
-
 
 runner = CliRunner()
 
@@ -61,7 +60,11 @@ def test_cli_simulate_stream_publish_ws_stub(tmp_path: Path, monkeypatch):
             return False
 
     # Inject stub websockets module into CLI namespace
-    monkeypatch.setitem(__import__("sys").modules, "websockets", SimpleNamespace(connect=_Connect()))
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "websockets",
+        SimpleNamespace(connect=_Connect())
+    )
 
     res = runner.invoke(app, [
         "simulate-stream",

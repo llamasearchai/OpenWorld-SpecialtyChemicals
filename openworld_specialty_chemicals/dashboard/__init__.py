@@ -1,16 +1,19 @@
 from __future__ import annotations
-from typing import List, Dict, Any
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
+
+from typing import Any, Dict, List
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     CollectorRegistry,
-    Gauge,
     Counter,
+    Gauge,
     Histogram,
     generate_latest,
-    CONTENT_TYPE_LATEST,
 )
+
 
 def build_app(max_buffer: int = 1024) -> FastAPI:
     """Build and configure the dashboard FastAPI application with enhanced monitoring."""
@@ -19,7 +22,7 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
         description="Environmental compliance monitoring and real-time data streaming API",
         version="1.0.0"
     )
-    
+
     # CORS configuration
     import os as _os
     origins_env = _os.getenv("OW_SC_CORS_ORIGINS", "*")
@@ -79,9 +82,14 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
         # Basic CSP suited for this app; adjust as needed
-        csp = "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        csp = (
+            "default-src 'self'; img-src 'self' data:; "
+            "script-src 'self'; style-src 'self' 'unsafe-inline'"
+        )
         response.headers.setdefault("Content-Security-Policy", csp)
         # Request logging
         try:
@@ -240,27 +248,34 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
         """Generate remediation recommendations from alert data."""
         alerts = payload.get("alerts", [])
         actions: List[str] = []
-        
+
         for alert in alerts:
             species = alert.get("species", "")
             level = alert.get("level", "info")
-            
+
             if species == "SO4":
                 action = "Increase lime dosing; verify gypsum precipitation; reduce discharge rate"
-            elif species == "As": 
+            elif species == "As":
                 action = "Adjust pH to 7-8; add ferric coagulant; check filter performance"
             elif species == "Ni":
-                action = "Increase ion exchange cycle; ensure resin regeneration; check chelation dosing"
+                action = (
+                    "Increase ion exchange cycle; ensure resin regeneration; "
+                    "check chelation dosing"
+                )
             else:
-                action = f"Review {species} treatment process and verify setpoints" if species else "Increase treatment intensity"
-                
+                action = (
+                    f"Review {species} treatment process and verify setpoints"
+                    if species
+                    else "Increase treatment intensity"
+                )
+
             actions.append(f"[{level.upper()}] {species}: {action}")
-            
+
         return {
             "alert_count": len(alerts),
             "actions": actions,
             "recommendations": [
-                {"species": a.get("species"), "action": actions[i]} 
+                {"species": a.get("species"), "action": actions[i]}
                 for i, a in enumerate(alerts)
             ]
         }
@@ -280,17 +295,17 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
         app.state.connections[client_id] = websocket
         app.state.conn_total.inc()
         app.state.conn_gauge.set(len(app.state.connections))
-        
+
         try:
             while True:
                 # Receive data from client
                 data = await websocket.receive_json()
                 app.state.msg_recv_total.inc()
-                
+
                 # Add timestamp if not present
                 if "timestamp" not in data:
                     data["timestamp"] = __import__('time').time()
-                
+
                 # Enforce WS message size cap and per-connection rate limit
                 max_msg = int(_os.getenv("OW_SC_WS_MAX_MESSAGE_BYTES", "8192"))
                 msgs_per_sec = int(_os.getenv("OW_SC_WS_MSGS_PER_SEC", "20"))
@@ -305,7 +320,7 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
                 # Simple per-connection fixed window rate limiter
                 now = __import__('time').time()
                 win = getattr(websocket, "_rl_win_start", None)
-                cnt = getattr(websocket, "_rl_win_cnt", 0)
+                _ = getattr(websocket, "_rl_win_cnt", 0)
                 if not win or now - win >= 1.0:
                     websocket._rl_win_start = now
                     websocket._rl_win_cnt = 0
@@ -316,11 +331,11 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
 
                 # Add to buffer
                 app.state.buffer.append(data)
-                
+
                 # Trim buffer if needed
                 if len(app.state.buffer) > app.state.max_buffer:
                     app.state.buffer = app.state.buffer[-app.state.max_buffer:]
-                
+
                 # Echo data back to all connected clients
                 disconnected = []
                 size = len(enc)
@@ -330,14 +345,14 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
                         try:
                             await ws.send_json(data)
                             app.state.msg_broadcast_total.inc()
-                        except:
+                        except Exception:
                             app.state.ws_errors_total.inc()
                             disconnected.append(conn_id)
-                
+
                 # Clean up disconnected clients
                 for conn_id in disconnected:
                     app.state.connections.pop(conn_id, None)
-                
+
                 # Publish to Redis for cross-instance fan-out
                 if app.state.redis is not None:
                     try:
@@ -346,7 +361,7 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
                         await app.state.redis.publish(app.state.redis_channel, _json.dumps(payload))
                     except Exception:
                         app.state.ws_errors_total.inc()
-                    
+
         except WebSocketDisconnect:
             app.state.connections.pop(client_id, None)
             app.state.conn_gauge.set(len(app.state.connections))
@@ -360,11 +375,11 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
     async def websocket_alerts(websocket: WebSocket):
         """WebSocket endpoint for compliance alert notifications."""
         await websocket.accept()
-        
+
         try:
             while True:
                 alert_data = await websocket.receive_json()
-                
+
                 # Process alert and generate response
                 response = {
                     "type": "alert_processed",
@@ -372,9 +387,9 @@ def build_app(max_buffer: int = 1024) -> FastAPI:
                     "alert": alert_data,
                     "status": "received"
                 }
-                
+
                 await websocket.send_json(response)
-                
+
         except WebSocketDisconnect:
             pass
         except Exception as e:

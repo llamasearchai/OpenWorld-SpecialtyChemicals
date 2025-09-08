@@ -4,10 +4,10 @@ Validation script for OpenWorld Specialty Chemicals
 Tests core functionality to ensure system is ready for publication
 """
 
-import os
 import sys
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 # Add the project root to Python path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -17,11 +17,11 @@ def test_imports():
     print("[TEST] Testing module imports...")
 
     try:
-        from openworld_specialty_chemicals.chemistry import fit_parameters
-        from openworld_specialty_chemicals.rules import check_permit
-        from openworld_specialty_chemicals.reporting import generate_certificate
         from openworld_specialty_chemicals.agents.fake_agent import FakeAdviceAgent
+        from openworld_specialty_chemicals.chemistry import fit_parameters
         from openworld_specialty_chemicals.cli import app
+        from openworld_specialty_chemicals.reporting import generate_certificate
+        from openworld_specialty_chemicals.rules import check_permit
         print("    [SUCCESS] All core modules imported successfully")
         return True
     except ImportError as e:
@@ -129,8 +129,9 @@ def test_cli_commands():
     print("[TEST] Testing CLI command structure...")
 
     try:
-        from openworld_specialty_chemicals.cli import app
         from typer.testing import CliRunner
+
+        from openworld_specialty_chemicals.cli import app
 
         runner = CliRunner()
 

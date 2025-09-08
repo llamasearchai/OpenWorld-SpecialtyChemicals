@@ -1,9 +1,12 @@
 from __future__ import annotations
-import os, json, asyncio
+
 import asyncio
+import os
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+
 from ..adapters.streaming import StreamBroadcaster
 
 app = FastAPI(title="OpenWorld Specialty Chemicals Dashboard")

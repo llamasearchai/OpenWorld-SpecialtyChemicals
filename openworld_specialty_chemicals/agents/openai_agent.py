@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-import os
-import time
 import hashlib
 import json
+import os
+import time
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 
 try:
     from openai import OpenAI  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     OpenAI = None  # type: ignore
 
-from .base import AdviceAgent
 import logging
+
+from .base import AdviceAgent
 
 try:
     import sqlite_utils  # type: ignore
@@ -42,7 +43,10 @@ class OpenAIAdviceAgent(AdviceAgent):
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         key = os.getenv("OPENAI_API_KEY")
         if OpenAI is None or not key:
-            raise RuntimeError("OpenAI client not available; install extras 'ai' and set OPENAI_API_KEY")
+            raise RuntimeError(
+                "OpenAI client not available; install extras 'ai' "
+                "and set OPENAI_API_KEY"
+            )
         self.client = OpenAI(api_key=key)
         self.timeout = timeout
         self.max_retries = max_retries
@@ -53,7 +57,12 @@ class OpenAIAdviceAgent(AdviceAgent):
         self.log = logging.getLogger("agents.openai")
 
         # Persistent cache (optional)
-        default_cache = Path.home() / ".cache" / "openworld_specialty_chemicals" / "agent_cache.sqlite"
+        default_cache = (
+            Path.home()
+            / ".cache"
+            / "openworld_specialty_chemicals"
+            / "agent_cache.sqlite"
+        )
         self.cache_path = cache_path or default_cache
         self.cache_db = None
         if sqlite_utils is not None:
@@ -130,7 +139,10 @@ class OpenAIAdviceAgent(AdviceAgent):
 
         if self._breaker_open():
             self.log.warning("circuit_open: skipping call to provider")
-            return {"actions": ["Check process"], "rationale": "Upstream unavailable (circuit open)."}
+            return {
+                "actions": ["Check process"],
+                "rationale": "Upstream unavailable (circuit open)."
+            }
 
         attempt = 0
         start_all = time.time()
@@ -156,7 +168,9 @@ class OpenAIAdviceAgent(AdviceAgent):
             except Exception as exc:  # pragma: no cover - depends on network failures
                 self._record_failure()
                 self.log.warning(
-                    "agent_error: attempt=%d err=%s", attempt, getattr(exc, "__class__", type(exc)).__name__
+                    "agent_error: attempt=%d err=%s",
+                    attempt,
+                    getattr(exc, "__class__", type(exc)).__name__
                 )
                 if attempt >= self.max_retries:
                     break
